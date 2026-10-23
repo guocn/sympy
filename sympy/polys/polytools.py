@@ -19,7 +19,7 @@ from sympy.core.evalf import (
 from sympy.core.function import Derivative
 from sympy.core.mul import Mul, _keep_coeff
 from sympy.core.intfunc import ilcm
-from sympy.core.numbers import I, Integer, equal_valued, NegativeInfinity
+from sympy.core.numbers import Float, I, Integer, NegativeInfinity, Rational, equal_valued
 from sympy.core.relational import Relational, Equality
 from sympy.core.symbol import Dummy, Symbol
 from sympy.core.sympify import sympify, _sympify
@@ -5754,6 +5754,9 @@ def gcdex(f, g, *gens, **args):
     """
     options.allowed_flags(args, ['auto', 'polys'])
 
+    f = _exact_integer_Float_to_Integer(f)
+    g = _exact_integer_Float_to_Integer(g)
+
     try:
         (F, G), opt = parallel_poly_from_expr((f, g), *gens, **args)
     except PolificationFailed as exc:
@@ -5964,6 +5967,22 @@ def cofactors(f, g, *gens, **args):
         return h, cff, cfg
 
 
+def _exact_integer_Float_to_Integer(expr):
+    """Rewrite a finite ``Float`` with an exact integer value to ``Integer``.
+
+    This keeps such arguments of ``gcd``, ``lcm`` and ``gcdex`` on the exact
+    ``ZZ``/``QQ`` code paths instead of the ``RR`` domain, in which every
+    nonzero element is a unit: the gcd is then trivially one and the lcm
+    degenerates to the product.
+    """
+    expr = sympify(expr)
+    if expr.is_Float and expr.is_finite:
+        rational = Rational(expr)
+        if rational.q == 1:
+            return rational
+    return expr
+
+
 @public
 def gcd_list(seq, *gens, **args):
     """
@@ -5980,6 +5999,7 @@ def gcd_list(seq, *gens, **args):
 
     """
     seq = sympify(seq)
+    seq = [_exact_integer_Float_to_Integer(expr) for expr in seq]
 
     def try_non_polynomial_gcd(seq):
         if not gens and not args:
@@ -6063,6 +6083,11 @@ def gcd(f, g=None, *gens, **args):
     >>> gcd(x**2 - 1, x**2 - 3*x + 2)
     x - 1
 
+    A ``Float`` that represents an exact integer is treated as such:
+
+    >>> gcd(3.0, 9.0)
+    3
+
     """
     if hasattr(f, '__iter__'):
         if g is not None:
@@ -6073,6 +6098,9 @@ def gcd(f, g=None, *gens, **args):
         raise TypeError("gcd() takes 2 arguments or a sequence of arguments")
 
     options.allowed_flags(args, ['polys'])
+
+    f = _exact_integer_Float_to_Integer(f)
+    g = _exact_integer_Float_to_Integer(g)
 
     try:
         (F, G), opt = parallel_poly_from_expr((f, g), *gens, **args)
@@ -6117,6 +6145,7 @@ def lcm_list(seq, *gens, **args):
 
     """
     seq = sympify(seq)
+    seq = [_exact_integer_Float_to_Integer(expr) for expr in seq]
 
     def try_non_polynomial_lcm(seq) -> Expr | None:
         if not gens and not args:
@@ -6203,6 +6232,9 @@ def lcm(f, g=None, *gens, **args):
         raise TypeError("lcm() takes 2 arguments or a sequence of arguments")
 
     options.allowed_flags(args, ['polys'])
+
+    f = _exact_integer_Float_to_Integer(f)
+    g = _exact_integer_Float_to_Integer(g)
 
     try:
         (F, G), opt = parallel_poly_from_expr((f, g), *gens, **args)

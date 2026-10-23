@@ -2372,14 +2372,36 @@ def test_gcd_numbers_vs_polys():
     assert gcd(Rational(3, 2), Rational(9, 4)) == Rational(3, 4)
     assert gcd(Rational(3, 2)*x, Rational(9, 4)) == 1
 
-    assert isinstance(gcd(3.0, 9.0), Float)
+    # exact-integer Floats are handled exactly; other Floats live in the
+    # RR domain in which the gcd is trivially 1
+    assert isinstance(gcd(3.0, 9.0), Integer)
     assert isinstance(gcd(3.0*x, 9.0), Float)
 
-    assert gcd(3.0, 9.0) == 1.0
+    assert gcd(3.0, 9.0) == 3
     assert gcd(3.0*x, 9.0) == 1.0
 
     # partial fix of 20597
     assert gcd(Mul(2, 3, evaluate=False), 2) == 2
+
+
+def test_gcd_lcm_gcdex_exact_integer_floats():
+    # issue 5562: Floats that represent exact integers should not be
+    # routed to the RR domain, where the gcd is trivially 1 and the
+    # lcm degenerates to the product
+    assert gcd(62.0, 10) == 2
+    assert gcd(62.0, 10.0) == 2
+    assert gcd(3.0, 9.0) == 3
+    assert gcd(-6.0, 4) == 2
+    assert gcd([62.0, 10]) == 2
+
+    assert lcm(6.0, 4) == 12
+    assert lcm(6.0, 4.0) == 12
+
+    assert gcdex(62.0, 10) == (1, -6, 2)
+
+    # Floats that are not exact integers stay in the RR domain
+    assert gcd(3.5, 7.0) == 1.0
+    assert lcm(1.5, 4.0) == 6.0
 
 
 def test_terms_gcd():
